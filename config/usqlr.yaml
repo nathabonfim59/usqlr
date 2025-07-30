@@ -1,0 +1,40 @@
+# usqlr Configuration Example
+# This is an example configuration file for usqlr server
+
+server:
+  # Maximum number of concurrent database connections
+  max_connections: 100
+  
+  # Request timeout for individual operations
+  request_timeout: "30s"
+  
+  # Enable MCP (Model Context Protocol) support
+  enable_mcp: true
+  
+  # Enable CORS headers for web clients
+  enable_cors: true
+
+auth:
+  # Enable OAuth 2.1 authentication (not yet implemented)
+  enable_oauth: false
+  
+  # Enable API key authentication (not yet implemented)
+  enable_api_key: false
+  
+  # Header name for API key authentication
+  api_key_header: "X-API-Key"
+
+# Example usage:
+# ./usqlr --config config/usqlr.yaml --port 8080
+# 
+# Or with environment variables:
+# USQLR_SERVER_MAX_CONNECTIONS=50 ./usqlr --port 8080
+
+# Available environment variables:
+# - USQLR_SERVER_MAX_CONNECTIONS: Override max_connections
+# - USQLR_SERVER_REQUEST_TIMEOUT: Override request_timeout  
+# - USQLR_SERVER_ENABLE_MCP: Override enable_mcp
+# - USQLR_SERVER_ENABLE_CORS: Override enable_cors
+# - USQLR_AUTH_ENABLE_OAUTH: Override enable_oauth
+# - USQLR_AUTH_ENABLE_API_KEY: Override enable_api_key
+# - USQLR_AUTH_API_KEY_HEADER: Override api_key_header
