@@ -67,14 +67,8 @@ func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) 
 		return nil, fmt.Errorf("failed to parse DSN: %w", err)
 	}
 
-	// Create handler with minimal configuration for server use
-	h, err := handler.New(nil, nil, memfs.New(), false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create handler: %w", err)
-	}
-
-	// Open database connection
-	db, err := h.Open(ctx, u)
+	// Open database connection using drivers directly
+	db, err := drivers.Open(u, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
@@ -89,10 +83,16 @@ func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) 
 	conn := &Connection{
 		ID:       id,
 		URL:      u,
-		Handler:  h,
 		DB:       db,
 		Created:  time.Now(),
 		LastUsed: time.Now(),
+	}
+
+	// Create handler for this connection
+	_, err = cp.multiHandler.CreateHandler(ctx, id, u, db)
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to create handler: %w", err)
 	}
 
 	// Add to pool
@@ -133,6 +133,9 @@ func (cp *ConnectionPool) CloseConnection(id string) error {
 	if conn.DB != nil {
 		conn.DB.Close()
 	}
+
+	// Remove handler
+	cp.multiHandler.RemoveHandler(id)
 
 	// Remove from pool
 	delete(cp.connections, id)
@@ -212,7 +215,7 @@ func (conn *Connection) ExecuteQuery(ctx context.Context, query string, args ...
 
 	conn.LastUsed = time.Now()
 
-	// Execute query
+	// Execute query directly on database
 	rows, err := conn.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query execution failed: %w", err)
@@ -272,13 +275,13 @@ func (conn *Connection) ExecuteQuery(ctx context.Context, query string, args ...
 }
 
 // ExecuteStatement executes a non-query SQL statement (INSERT, UPDATE, DELETE, etc.).
-func (conn *Connection) ExecuteStatement(ctx context.Context, query string, args ...interface{}) (*StatementResult, error) {
+func (conn *Connection) ExecuteStatement(ctx context.Context, statement string, args ...interface{}) (*StatementResult, error) {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
 	conn.LastUsed = time.Now()
 
-	result, err := conn.DB.ExecContext(ctx, query, args...)
+	result, err := conn.DB.ExecContext(ctx, statement, args...)
 	if err != nil {
 		return nil, fmt.Errorf("statement execution failed: %w", err)
 	}
