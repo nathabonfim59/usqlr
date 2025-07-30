@@ -24,12 +24,12 @@ test: build test-sqlite test-drivers
 # Run SQLite integration test
 test-sqlite: build
 	@echo "Running SQLite integration test..."
-	cd $(TESTS_DIR) && ./test_sqlite.sh
+	cd $(TESTS_DIR) && ./test_sqlite_simple.sh
 
 # Run multi-database driver test
 test-drivers: build
 	@echo "Running multi-database driver test..."
-	cd $(TESTS_DIR) && ./test_drivers.sh
+	cd $(TESTS_DIR) && ./test_drivers_simple.sh
 
 # Test with a specific database (example: make test-db DSN="postgres://user:pass@localhost/db")
 test-db: build
