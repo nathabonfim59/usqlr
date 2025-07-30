@@ -1,6 +1,6 @@
 # Makefile for usqlr - Server version of usql with MCP support
 
-.PHONY: build test test-sqlite test-drivers clean help
+.PHONY: build test test-sqlite test-drivers test-db clean help db-start db-stop db-test db-list
 
 # Binary names
 BINARY_NAME=usqlr
@@ -55,6 +55,41 @@ run-config: build
 	@echo "Starting usqlr server with config: $(CONFIG)"
 	./$(BINARY_NAME) --config $(CONFIG)
 
+# Database environment management
+db-start:
+	@if [ -z "$(DB)" ]; then \
+		echo "Usage: make db-start DB=<database>"; \
+		echo "       make db-start DB=test (starts primary test databases)"; \
+		echo "       make db-start DB=all (starts all databases)"; \
+		echo "Example: make db-start DB=postgres"; \
+		cd $(TESTS_DIR) && ./setup_databases.sh list; \
+	else \
+		cd $(TESTS_DIR) && ./setup_databases.sh start $(DB) $(UPDATE); \
+	fi
+
+db-stop:
+	@if [ -z "$(DB)" ]; then \
+		echo "Usage: make db-stop DB=<database>"; \
+		echo "       make db-stop DB=all (stops all databases)"; \
+	else \
+		cd $(TESTS_DIR) && ./setup_databases.sh stop $(DB); \
+	fi
+
+db-test: build
+	@if [ -z "$(DB)" ]; then \
+		echo "Usage: make db-test DB=<database>"; \
+		echo "Example: make db-test DB=postgres"; \
+	else \
+		cd $(TESTS_DIR) && ./setup_databases.sh test $(DB); \
+	fi
+
+db-list:
+	@echo "Available database configurations:"
+	@cd $(TESTS_DIR) && ./setup_databases.sh list
+
+db-status:
+	@cd $(TESTS_DIR) && ./setup_databases.sh status
+
 # Clean build artifacts and test files
 clean:
 	@echo "Cleaning up..."
@@ -73,6 +108,11 @@ help:
 	@echo "  test-db      - Test specific database (requires DSN parameter)"
 	@echo "  dev          - Run development server on port 8080"
 	@echo "  run-config   - Run server with custom config (requires CONFIG parameter)"
+	@echo "  db-start     - Start database containers (requires DB parameter)"
+	@echo "  db-stop      - Stop database containers (requires DB parameter)"
+	@echo "  db-test      - Test database connection (requires DB parameter)"
+	@echo "  db-list      - List available database configurations"
+	@echo "  db-status    - Show status of database containers"
 	@echo "  clean        - Clean build artifacts and test files"
 	@echo "  help         - Show this help message"
 	@echo ""
@@ -80,5 +120,9 @@ help:
 	@echo "  make build"
 	@echo "  make test"
 	@echo "  make test-db DSN=\"sqlite3://test.db\""
+	@echo "  make db-start DB=postgres"
+	@echo "  make db-start DB=test UPDATE=-u"
+	@echo "  make db-test DB=mysql"
+	@echo "  make db-stop DB=all"
 	@echo "  make run-config CONFIG=\"config/usqlr.yaml\""
 	@echo "  make dev"
