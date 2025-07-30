@@ -19,11 +19,10 @@ type ConnectionInterface interface {
 
 // ConnectionPool manages multiple database connections.
 type ConnectionPool struct {
-	mu           sync.RWMutex
-	connections  map[string]*Connection
-	maxConns     int
-	config       *Config
-	multiHandler *MultiHandler
+	mu          sync.RWMutex
+	connections map[string]*Connection
+	maxConns    int
+	config      *Config
 }
 
 // Connection represents a database connection with its associated handler.
@@ -39,10 +38,9 @@ type Connection struct {
 // NewConnectionPool creates a new connection pool.
 func NewConnectionPool(config *Config) *ConnectionPool {
 	return &ConnectionPool{
-		connections:  make(map[string]*Connection),
-		maxConns:     config.Server.MaxConnections,
-		config:       config,
-		multiHandler: NewMultiHandler(config),
+		connections: make(map[string]*Connection),
+		maxConns:    config.Server.MaxConnections,
+		config:      config,
 	}
 }
 
@@ -68,7 +66,7 @@ func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) 
 	}
 
 	// Open database connection using drivers directly
-	db, err := drivers.Open(u, nil, nil)
+	db, err := drivers.Open(ctx, u, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
@@ -88,12 +86,6 @@ func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) 
 		LastUsed: time.Now(),
 	}
 
-	// Create handler for this connection
-	_, err = cp.multiHandler.CreateHandler(ctx, id, u, db)
-	if err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to create handler: %w", err)
-	}
 
 	// Add to pool
 	cp.connections[id] = conn
@@ -134,8 +126,6 @@ func (cp *ConnectionPool) CloseConnection(id string) error {
 		conn.DB.Close()
 	}
 
-	// Remove handler
-	cp.multiHandler.RemoveHandler(id)
 
 	// Remove from pool
 	delete(cp.connections, id)
@@ -177,9 +167,12 @@ type ConnectionInfo struct {
 
 // CheckConnection tests if a connection is still alive.
 func (cp *ConnectionPool) CheckConnection(ctx context.Context, id string) error {
-	conn, err := cp.GetConnection(id)
-	if err != nil {
-		return err
+	cp.mu.RLock()
+	conn, exists := cp.connections[id]
+	cp.mu.RUnlock()
+	
+	if !exists {
+		return fmt.Errorf("connection with ID %s not found", id)
 	}
 
 	return conn.DB.PingContext(ctx)

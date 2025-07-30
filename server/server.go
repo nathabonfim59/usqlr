@@ -23,8 +23,9 @@ type Server struct {
 // New creates a new server instance.
 func New(config *Config) (*Server, error) {
 	pool := NewConnectionPool(config)
+	adapter := NewPoolAdapter(pool)
 	
-	mcpHandler, err := mcp.New(pool)
+	mcpHandler, err := mcp.New(adapter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MCP handler: %w", err)
 	}

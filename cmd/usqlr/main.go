@@ -13,7 +13,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/xo/usql/drivers"
 	"github.com/xo/usql/server"
 )
 
@@ -50,8 +49,6 @@ func New() *cobra.Command {
 }
 
 func run(configFile, addr string, port int) error {
-	// Initialize drivers
-	drivers.Register()
 
 	// Load configuration
 	config, err := loadConfig(configFile)
