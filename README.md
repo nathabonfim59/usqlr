@@ -47,6 +47,103 @@ for other databases.
 [databases]: #database-support "Database Support"
 [releases]: https://github.com/xo/usql/releases "Releases"
 
+## usqlr - Server Version with MCP Support
+
+**This is a fork of usql that adds server capabilities with Model Context Protocol (MCP) support.**
+
+`usqlr` transforms the powerful usql CLI tool into a server that can manage multiple database connections simultaneously and exposes them through the [Model Context Protocol (MCP)](https://spec.modelcontextprotocol.io/). This enables AI assistants and other applications to interact with databases programmatically while maintaining all of usql's extensive database driver support.
+
+### Key Features
+
+- **Server Mode**: Run as a persistent server instead of a CLI tool
+- **MCP Protocol**: Full JSON-RPC 2.0 compliant MCP implementation for AI integration
+- **Multi-Connection**: Manage multiple database connections concurrently
+- **All usql Drivers**: Supports the same 70+ database drivers as usql
+- **HTTP API**: RESTful endpoints for health checks and connection management
+- **Container Support**: Easy database testing with Docker/Podman integration
+
+### Building usqlr
+
+Build the server binary using the included Makefile:
+
+```bash
+# Build the usqlr server binary
+make build
+
+# Run development server on port 8080
+make dev
+
+# Run with custom configuration
+make run-config CONFIG=config/usqlr.yaml
+```
+
+### Testing
+
+The project includes comprehensive tests for both SQLite integration and multi-database driver support:
+
+```bash
+# Run all tests
+make test
+
+# Run specific test suites
+make test-sqlite    # SQLite integration test with MCP protocol
+make test-drivers   # Test all 70+ database drivers
+
+# Database container testing (requires Docker/Podman)
+make db-start DB=postgres    # Start PostgreSQL container
+make db-test DB=postgres     # Test PostgreSQL connection
+make db-stop DB=postgres     # Stop PostgreSQL container
+
+# View all available database configurations
+make db-list
+```
+
+For detailed testing information, see the [Testing README](tests/README.md).
+
+### Usage
+
+Start the usqlr server:
+
+```bash
+# Start server on default port 8080
+./usqlr
+
+# Start server on custom port
+./usqlr --port 9000
+
+# Use custom configuration file
+./usqlr --config config/usqlr.yaml
+```
+
+The server exposes:
+- **MCP Protocol**: `POST /mcp` - JSON-RPC 2.0 endpoint for AI integration
+- **Health Check**: `GET /health` - Server health and connection status
+- **Connection Management**: REST API for database operations
+
+### MCP Integration
+
+The server implements the full MCP specification with tools for:
+- `create_connection` - Create new database connections
+- `execute_query` - Execute SQL queries with results
+- `execute_statement` - Execute SQL statements (INSERT, UPDATE, DELETE)
+- `close_connection` - Close database connections
+
+Example MCP request:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "create_connection",
+    "arguments": {
+      "connection_id": "my_db",
+      "dsn": "postgres://user:pass@localhost/mydb"
+    }
+  },
+  "id": 1
+}
+```
+
 ## Installing
 
 `usql` can be installed [via Release][], [via Homebrew][], [via AUR][], [via
