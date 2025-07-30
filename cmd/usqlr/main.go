@@ -14,6 +14,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xo/usql/server"
+	
+	// Import all database drivers (same as usql)
+	_ "github.com/xo/usql/internal"
 )
 
 func main() {
