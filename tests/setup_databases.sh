@@ -96,10 +96,28 @@ start_databases() {
     # Change to contrib directory and run the existing script
     cd "$CONTRIB_DIR"
     
-    if [ "$update_flag" = "-u" ]; then
-        ./podman-run.sh "$target" -u
+    # Check if slirp4netns is available, if not patch the script temporarily
+    if ! command -v slirp4netns &> /dev/null; then
+        print_info "slirp4netns not found, using bridge network instead"
+        
+        # Create a temporary patched version of podman-run.sh in current directory
+        local temp_script="$(pwd)/podman-run-fixed.sh"
+        sed 's/NETWORK=slirp4netns/NETWORK=bridge/' podman-run.sh > "$temp_script"
+        chmod +x "$temp_script"
+        
+        if [ "$update_flag" = "-u" ]; then
+            "$temp_script" "$target" -u
+        else
+            "$temp_script" "$target"
+        fi
+        
+        rm -f "$temp_script"
     else
-        ./podman-run.sh "$target"
+        if [ "$update_flag" = "-u" ]; then
+            ./podman-run.sh "$target" -u
+        else
+            ./podman-run.sh "$target"
+        fi
     fi
     
     cd - > /dev/null
