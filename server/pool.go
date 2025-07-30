@@ -8,23 +8,28 @@ import (
 	"time"
 
 	"github.com/xo/dburl"
-	"github.com/xo/usql/handler"
-	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/xo/usql/drivers"
 )
+
+// ConnectionInterface defines the interface for database connections.
+type ConnectionInterface interface {
+	ExecuteQuery(ctx context.Context, query string, args ...interface{}) (*QueryResult, error)
+	ExecuteStatement(ctx context.Context, query string, args ...interface{}) (*StatementResult, error)
+}
 
 // ConnectionPool manages multiple database connections.
 type ConnectionPool struct {
-	mu          sync.RWMutex
-	connections map[string]*Connection
-	maxConns    int
-	config      *Config
+	mu           sync.RWMutex
+	connections  map[string]*Connection
+	maxConns     int
+	config       *Config
+	multiHandler *MultiHandler
 }
 
 // Connection represents a database connection with its associated handler.
 type Connection struct {
 	ID       string
 	URL      *dburl.URL
-	Handler  *handler.Handler
 	DB       *sql.DB
 	Created  time.Time
 	LastUsed time.Time
@@ -34,14 +39,15 @@ type Connection struct {
 // NewConnectionPool creates a new connection pool.
 func NewConnectionPool(config *Config) *ConnectionPool {
 	return &ConnectionPool{
-		connections: make(map[string]*Connection),
-		maxConns:    config.Server.MaxConnections,
-		config:      config,
+		connections:  make(map[string]*Connection),
+		maxConns:     config.Server.MaxConnections,
+		config:       config,
+		multiHandler: NewMultiHandler(config),
 	}
 }
 
 // CreateConnection creates a new database connection and adds it to the pool.
-func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) (*Connection, error) {
+func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) (ConnectionInterface, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
@@ -96,7 +102,7 @@ func (cp *ConnectionPool) CreateConnection(ctx context.Context, id, dsn string) 
 }
 
 // GetConnection retrieves a connection from the pool.
-func (cp *ConnectionPool) GetConnection(id string) (*Connection, error) {
+func (cp *ConnectionPool) GetConnection(id string) (ConnectionInterface, error) {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
 
