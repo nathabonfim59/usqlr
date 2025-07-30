@@ -86,22 +86,29 @@ run_driver_test() {
     local successful_tests=0
     local failed_tests=0
     
+    # Temporarily disable set -e for the test loop to prevent early exit
+    set +e
+    
     for test_config in "${DATABASE_TESTS[@]}"; do
         IFS=':' read -r name dsn <<< "$test_config"
         
         print_status "Testing $name driver..."
         
+        # Test connection creation (don't let failures stop the script)
         if test_connection_creation "test_${name// /_}" "$dsn" $request_id "$SERVER_PORT"; then
             ((successful_tests++))
-            # Try to close the connection
-            close_connection "test_${name// /_}" $((request_id + 1000)) "$SERVER_PORT" > /dev/null 2>&1
+            # Try to close the connection (ignore all errors)
+            close_connection "test_${name// /_}" $((request_id + 1000)) "$SERVER_PORT" >/dev/null 2>&1 || true
         else
             ((failed_tests++))
         fi
         
         ((total_tests++))
-        ((request_id++))
+        ((request_id++))        
     done
+    
+    # Re-enable set -e
+    set -e
     
     # Test summary
     print_test_summary "$total_tests" "$successful_tests" "$failed_tests"
