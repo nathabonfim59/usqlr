@@ -1,6 +1,6 @@
 # Makefile for usqlr - Server version of usql with MCP support
 
-.PHONY: build test test-sqlite test-drivers test-db clean help db-start db-stop db-test db-list
+.PHONY: build build-musl test test-sqlite test-drivers test-db clean help db-start db-stop db-test db-list
 
 # Binary names
 BINARY_NAME=usqlr
@@ -9,6 +9,7 @@ TESTS_DIR=tests
 
 # Go build flags
 LDFLAGS=-ldflags "-s -w"
+MUSL_LDFLAGS=-ldflags "-s -w -linkmode external -extldflags '-static'"
 
 # Default target
 all: build
@@ -17,6 +18,11 @@ all: build
 build:
 	@echo "Building usqlr..."
 	go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/usqlr
+
+# Build the usqlr binary with musl (static linking)
+build-musl:
+	@echo "Building usqlr with musl (static linking)..."
+	CC=musl-gcc CGO_ENABLED=1 go build $(MUSL_LDFLAGS) -o $(BINARY_NAME) ./cmd/usqlr
 
 # Run all tests
 test: build test-sqlite test-drivers
@@ -102,6 +108,7 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  build        - Build the usqlr binary"
+	@echo "  build-musl   - Build the usqlr binary with musl (static linking)"
 	@echo "  test         - Run all tests"
 	@echo "  test-sqlite  - Run SQLite integration test"
 	@echo "  test-drivers - Run multi-database driver test"
@@ -118,6 +125,7 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make build"
+	@echo "  make build-musl"
 	@echo "  make test"
 	@echo "  make test-db DSN=\"sqlite3://test.db\""
 	@echo "  make db-start DB=postgres"
